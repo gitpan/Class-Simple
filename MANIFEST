@@ -1,0 +1,12 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/Class-Simple.t
+t/private1.t
+t/private2.t
+t/uninit1.t
+t/uninit2.t
+t/anon.t
+lib/Class/Simple.pm
+META.yml                                 Module meta-data (added by MakeMaker)

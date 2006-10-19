@@ -1,0 +1,10 @@
+Revision history for Perl extension Class::Simple.
+$Id: Changes,v 1.2 2006/10/19 17:39:57 sullivan Exp $
+
+0.02 Wed Oct 18 16:18:03 PDT 2006
+	- Added uninitialized()
+
+0.01  Wed Oct  4 12:29:59 2006
+	- original version; created by h2xs 1.23 with options
+		-XAn Class::Simple
+
