@@ -1,4 +1,4 @@
-#$Id: Simple.pm,v 1.9 2006/10/19 21:26:01 sullivan Exp $
+#$Id: Simple.pm,v 1.11 2006/10/20 18:42:55 sullivan Exp $
 
 package Class::Simple;
 
@@ -6,7 +6,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Scalar::Util qw(refaddr);
 use Carp;
@@ -39,7 +39,10 @@ my $self = shift;
 		{
 		my $self = shift;
 
-			return ($self->$attrib(@_));
+			my $ref = refaddr($self);
+			croak("$attrib is readonly:  cannot set.")
+			  if ($READONLY{$ref}->{$store_as});
+			return ($STORAGE{$ref}->{$store_as} = shift(@_));
 		};
 	}
 	elsif ($prefix eq 'get')
@@ -48,102 +51,78 @@ my $self = shift;
 		{
 		my $self = shift;
 
-			return ($self->$attrib());
+			my $ref = refaddr($self);
+			croak("$attrib is not set!")
+			  if ($STORAGE{$ref}->{TYPO}
+			   && !exists($STORAGE{$ref}->{$store_as}));
+			return ($STORAGE{$ref}->{$store_as});
 		};
 	}
 	elsif ($prefix eq 'clear')
 	{
+		my $setter = "set_$attrib";
 		*{$AUTOLOAD} = sub
 		{
 		my $self = shift;
 
-			return ($self->$attrib(undef));
+			return ($self->$setter(undef));
 		};
 	}
 	elsif ($prefix eq 'raise')
 	{
+		my $setter = "set_$attrib";
 		*{$AUTOLOAD} = sub
 		{
 		my $self = shift;
 
-			return ($self->$attrib(1));
+			return ($self->$setter(1));
 		};
 	}
 	elsif ($prefix eq 'readonly')
 	{
+		my $setter = "set_$attrib";
 		*{$AUTOLOAD} = sub
 		{
 		my $self = shift;
 
-			my $ret = $self->$attrib(@_);
+			my $ret = $self->$setter(@_);
 			my $ref = refaddr($self);
 			$READONLY{$ref}->{$store_as} = 1;
 			return ($ret);
 		};
 	}
 	#
-	#	Where the real work gets done.
+	#	All methods starting with '_' can only be called from
+	#	within their package.  Not inheritable, which makes
+	#	the test easier than something privatized..
 	#
-	else
+	elsif (!$prefix && ($attrib =~ /^_/))
 	{
+		my $setter = "set_$store_as";
+		my $getter = "get_$store_as";
 		*{$AUTOLOAD} = sub
 		{
 		my $self = shift;
 
-			my $p_class = $PRIVATE{$attrib} || '';
-
-			#
-			#	For some reason we have to bubble up over
-			#	Class::Simple to find the right caller.
-			#	I don't know why and I'm not happy about that.
-			#	I will be digging to find the answer.
-			#
-			my $called_by;
-			if ($p_class)
-			{
-				for (my $i = 0; my $c = caller($i); ++$i)
-				{
-					next if $c eq 'Class::Simple';
-					$called_by = $c;
-					last;
-				}
-			}
-
-			#
-			#	Croak if the calling package is not
-			#	the package that privatized this OR
-			#	one of its ancestors...if it's privatized.
-			#
-			croak("Cannot call $full_method:  Private method to $PRIVATE{$attrib}.")
-			  if ( $p_class
-			    && ($called_by ne $p_class)
-			    && !($p_class)->isa($called_by) );
-
-			my $ref = refaddr($self);
-			if ($READONLY{$ref}->{$store_as})
-			{
-				croak("$full_method is readonly:  cannot set.")
-				  if scalar(@_);
-				return ($STORAGE{$ref}->{$store_as});
-			}
-			elsif ($STORAGE{$ref}->{TYPO} && !scalar(@_))
-			{
-				croak("$attrib is not set!")
-				  unless exists($STORAGE{$ref}->{$store_as});
-				return ($STORAGE{$ref}->{$store_as});
-			}
-			else
-			{
-				return ( scalar(@_)
-				  ? return ($STORAGE{$ref}->{$store_as} = $_[0])
-				  : return ($STORAGE{$ref}->{$store_as}) );
-			}
+			croak("Cannot call $attrib:  Private method to $pkg.")
+			  unless ($pkg eq Class::Simple::_my_caller());
+			return (scalar(@_)
+			  ? $self->$setter(@_)
+			  : $self->$getter());
 		};
+	}
+	else
+	{
+		my $setter = "set_$store_as";
+		my $getter = "get_$store_as";
+		*{$AUTOLOAD} = sub
+		{
+		my $self = shift;
 
-		#
-		#	If this is _foo(), privatize it.
-		#
-		$PRIVATE{$attrib} = $pkg if (!$prefix && ($attrib =~ /^_/));
+			return (scalar(@_)
+			  ? $self->$setter(@_)
+			  : $self->$getter());
+		};
 	}
 	return (&{$AUTOLOAD}($self, @_));
 }
@@ -160,7 +139,6 @@ my $self = shift;
 	$self->travel_isa('DESTROY', 'DEMOLISH');
 	my $ref = refaddr($self);
 	delete($STORAGE{$ref}) if exists($STORAGE{$ref});
-	delete($PRIVATE{$ref}) if exists($PRIVATE{$ref});
 	delete($READONLY{$ref}) if exists($READONLY{$ref});
 }
 
@@ -237,27 +215,101 @@ my $class = shift;
 
 
 #
-#	Flag the given method(s) as being private
-#
-#	A word about the mechanism here.  By using just the method name
-#	as the hash key, we allow the privacy to be inherited.  By setting
-#	the value to the class, we get a helpful error message when
-#	someone violates our privacy and we can use that class in
-#	the privacy check up above.
+#	Flag the given method(s) as being private to the class
+#	(and its children unless overridden).
 #
 sub privatize
 {
 my $class = shift;
 
-	foreach my $name (@_)
+	foreach my $method (@_)
 	{
-		croak("Cannot privatize ${class}::$name:  already private in $PRIVATE{$name}.")
-		  if defined($PRIVATE{$name});
-		my $called_by = caller(0);
-		croak("Attempt to privatize ${class}::$name from $called_by.  Can only privatize in your own class.")
+		no strict 'refs';
+
+		#
+		#	Can't privatize something that is already private
+		#	from an ancestor.
+		#
+		foreach my $private_class (keys(%PRIVATE))
+		{
+			next unless $PRIVATE{$private_class}->{$method};
+			croak("Cannot privatize ${class}::$method:  already private in $private_class.")
+			  unless $private_class->isa($class);
+		}
+
+		#
+		#	Can't retroactively make privatize something.
+		#
+		my $called_by = _my_caller();
+		croak("Attempt to privatize ${class}::$method from $called_by.  Can only privatize in your own class.")
 		  if ($class ne $called_by);
-		$PRIVATE{$name} = $class;
+		$PRIVATE{$class}->{$method} = 1;
+
+		#
+		#	Although it is duplication of code (which I hope
+		#	to come up with a clever way to avoid at some point),
+		#	it is a better solution to have privatize() create
+		#	these subs now.  Otherwise, having the private test
+		#	done in AUTOLOAD gets to be fairly convoluted.
+		#	Defining them here makes the tests a lot simpler.
+		#
+		my $getter = "${class}::get_$method";
+		my $setter = "${class}::set_$method";
+		my $generic = "${class}::$method";
+		*{$getter} = sub
+		{
+		my $self = shift;
+
+			no strict 'refs';
+			croak("Cannot call $getter:  Private method to $class.")
+			  unless $class->isa(Class::Simple::_my_caller());
+			my $ref = refaddr($self);
+			croak("$method is not set!")
+			  if ($STORAGE{$ref}->{TYPO}
+			   && !exists($STORAGE{$ref}->{$method}));
+			return ($STORAGE{$ref}->{$method});
+		};
+		*$setter = sub
+		{
+		my $self = shift;
+
+			no strict 'refs';
+			croak("Cannot call $setter:  Private method to $class.")
+			  unless $class->isa(Class::Simple::_my_caller());
+			my $ref = refaddr($self);
+			croak("$method is readonly:  cannot set.")
+			  if ($READONLY{$ref}->{$method});
+			return ($STORAGE{$ref}->{$method} = shift(@_));
+		};
+		*$generic = sub
+		{
+		my $self = shift;
+
+			no strict 'refs';
+			croak("Cannot call $generic:  Private method to $class.")
+			  unless $class->isa(Class::Simple::_my_caller());
+			my $ref = refaddr($self);
+			return (scalar(@_)
+			  ? $self->$setter(@_)
+			  : $self->$getter());
+		};
+		my $ugen = "_${generic}";
+		*$ugen = *$generic;
 	}
+}
+
+
+
+#
+#	Bubble up the caller() stack until we leave this package.
+#
+sub _my_caller
+{
+	for (my $i = 0; my $c = caller($i); ++$i)
+	{
+		return ($c) unless $c eq __PACKAGE__;
+	}
+	return (__PACKAGE__); # Shouldn't get here but just in case
 }
 
 
@@ -320,7 +372,10 @@ Class::Simple - Simple Object-Oriented Base Class
   package Foo:
   use base qw(Class::Simple);
 
-  Foo->privatize(qw(attrib bar)); # ...or not.
+  INIT
+  {
+	Foo->privatize(qw(attrib1 attrib2)); # ...or not.
+  }
   my $obj = Foo->new();
 
   $obj->attrib(1);     # The same as...
@@ -438,6 +493,8 @@ Returns the object and calls B<BUILD()>.
 
 Mark the given methods as being private to the class.
 They will only be accessible to the class or its ancestors.
+Make sure this is called before you start instantiating objects.
+It should probably be put in a B<BEGIN> or B<INIT> block.
 
 =item B<uninitialized()>
 
@@ -550,10 +607,6 @@ Underscore methods are automatically privatized.
 
 If an ancestor class has a B<foo> attribute, children cannot have their
 own B<foo>.  They get their parent's B<foo>.
-
-I have not been working on things where I need extreme performance from
-things.  Consequently, this module may not be as efficient as it
-could be.  I suspect future versions will address this.
 
 I don't actually have a need for DUMP and SLURP but I thought they
 would be nice to include.

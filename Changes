@@ -1,5 +1,8 @@
 Revision history for Perl extension Class::Simple.
-$Id: Changes,v 1.2 2006/10/19 17:39:57 sullivan Exp $
+$Id: Changes,v 1.3 2006/10/20 18:45:06 sullivan Exp $
+
+0.03 Fri Oct 20 11:43:14 PDT 2006
+	- Reworked the privatization of methods after finding a pretty good bug.
 
 0.02 Wed Oct 18 16:18:03 PDT 2006
 	- Added uninitialized()
