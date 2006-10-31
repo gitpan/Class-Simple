@@ -1,4 +1,6 @@
-#$Id: Simple.pm,v 1.11 2006/10/20 18:42:55 sullivan Exp $
+#$Id: Simple.pm,v 1.15 2006/10/31 18:56:44 sullivan Exp $
+#
+#	See the POD documentation starting towards the __END__ of this file.
 
 package Class::Simple;
 
@@ -6,7 +8,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use Scalar::Util qw(refaddr);
 use Carp;
@@ -58,6 +60,24 @@ my $self = shift;
 			return ($STORAGE{$ref}->{$store_as});
 		};
 	}
+#
+#	Bug #7528 in Perl keeps this from working.
+#	http://rt.perl.org/rt3/Public/Bug/Display.html?id=7528
+#	I could make people declare methods they want to use lv_
+#	with but that goes against the philosophy of being ::Simple.
+#
+#	elsif ($prefix eq 'lv')
+#	{
+#		*{$AUTOLOAD} = sub : lvalue
+#		{
+#		my $self = shift;
+#
+#			my $ref = refaddr($self);
+#			croak("$attrib is readonly:  cannot set.")
+#			  if ($READONLY{$ref}->{$store_as});
+#			return ($STORAGE{$ref}->{$store_as});
+#		};
+#	}
 	elsif ($prefix eq 'clear')
 	{
 		my $setter = "set_$attrib";
@@ -96,19 +116,35 @@ my $self = shift;
 	#	within their package.  Not inheritable, which makes
 	#	the test easier than something privatized..
 	#
+	#	Note that we cannot just call get_ and set_ here
+	#	because if someone write their own get_foo and then
+	#	_foo is called, _foo will call set_foo, which will
+	#	probably store something with _foo, which will call
+	#	set_foo, etc.  Sure wish we could somehow share
+	#	code with get_ and set_, though.
+	#
 	elsif (!$prefix && ($attrib =~ /^_/))
 	{
-		my $setter = "set_$store_as";
-		my $getter = "get_$store_as";
 		*{$AUTOLOAD} = sub
 		{
 		my $self = shift;
 
 			croak("Cannot call $attrib:  Private method to $pkg.")
 			  unless ($pkg eq Class::Simple::_my_caller());
-			return (scalar(@_)
-			  ? $self->$setter(@_)
-			  : $self->$getter());
+			my $ref = refaddr($self);
+			if (scalar(@_))
+			{
+				croak("$attrib is readonly:  cannot set.")
+				  if ($READONLY{$ref}->{$store_as});
+				return ($STORAGE{$ref}->{$store_as} =shift(@_));
+			}
+			else
+			{
+				croak("$attrib is not set!")
+				  if ($STORAGE{$ref}->{TYPO}
+				   && !exists($STORAGE{$ref}->{$store_as}));
+				return ($STORAGE{$ref}->{$store_as});
+			}
 		};
 	}
 	else
@@ -175,7 +211,7 @@ my $func = shift;
 
 
 #
-#	Very simple.  Make a scalar, bless it, call init.
+#	Make a scalar.  Bless it.  Call init.
 #
 sub new
 {
@@ -188,7 +224,11 @@ my $class = shift;
 	bless($self, $class);
 	$self->readonly_CLASS($class);
 
-	foreach my $k (%TYPO)
+	#
+	#	Even though uninitialized is a class thing, it's easier
+	#	to note it in $self here in new().
+	#
+	foreach my $k (keys(%TYPO))
 	{
 		next unless ($class)->isa($k);
 		$self->readonly_TYPO(1);
@@ -316,7 +356,8 @@ sub _my_caller
 
 #
 #	This will not be called if the child classes have
-#	their own.  In case they don't, this is a default.
+#	their own.  In case they don't (and they really shouldn't
+#	because they should be using BUILD() instead), this is the default.
 #
 sub init
 {
@@ -330,6 +371,11 @@ my $self = shift;
 
 use Data::Dumper;
 
+#
+#	Right now DUMP and SLURP are just Data::Dumper front ends.
+#	That does not take care of referring to other objects (should it?)
+#	so I hope to come up with something more clever in the future.
+#
 sub DUMP
 {
 my $self = shift;
@@ -352,6 +398,11 @@ my $str = shift;
 	my $obj;
 	{
 		$obj = eval "my $str";
+		if ($@)
+		{
+			carp("Problem SLURPING: $@.");
+			return (undef);
+		}
 	}
 
 	my $ref = refaddr($self);

@@ -1,4 +1,4 @@
-# $Id: Class-Simple.t,v 1.3 2006/10/19 17:40:40 sullivan Exp $
+# $Id: Class-Simple.t,v 1.4 2006/10/31 18:57:13 sullivan Exp $
 #
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl Class-Simple.t'
@@ -59,6 +59,16 @@ my $package = shift;
 	eval { $f->set_chumba(4) };
 	like($@, qr/readonly/, 'setting a readonly fails');	##
 	is($f->chumba, 2, 'readonly still set');		##
+
+## Bug in Perl that keeps this from working.
+#	$f->set_lemmy(1);
+#	is($f->lemmy, 1, 'Getting ready for lvalue test');	##
+#	$f->lv_lemmy += 2;
+#	is($f->lemmy, 3, 'lvalue worked with +=');		##
+#	++$f->lv_lemmy;
+#	is($f->lemmy, 4, 'lvalue worked with ++');		##
+#	$f->lv_lemmy -= 3;
+#	is($f->lemmy, 1, 'lvalue worked with -=');		##
 }
 
 

@@ -1,4 +1,4 @@
-# $Id: private2.t,v 1.2 2006/10/10 21:29:10 sullivan Exp $
+# $Id: private2.t,v 1.4 2006/10/31 18:57:15 sullivan Exp $
 
 package Foo;
 use base qw(Class::Simple);
@@ -18,7 +18,7 @@ $foo->_mongo(1);
 package Foobie;
 use base qw(Foo);
 
-use Test::More tests => 7;
+use Test::More tests => 9;
 BEGIN { use_ok('Class::Simple') };
 
 my $f = Foobie->new();
@@ -34,6 +34,7 @@ $f->foo(TEST_STR);
 my $str = $f->DUMP('moo');
 # diag("dump is $str");
 my $g = Foobie->new();
+ok(!$g->SLURP('foo'), 'SLURP caught bad input');		##
 $g->SLURP($str);
 is($g->foo, TEST_STR, 'DUMP and SLURP seem to work');
 
@@ -48,5 +49,18 @@ like($@, qr/privatize in your own class/,'Can only privatize in current class');
 
 eval { $g->_mongo() };
 like($@, qr/Private method/, '_mongo is private from Foobie');	##
+
+
+sub set_recurse
+{
+my $self = shift;
+
+	return ($self->_recurse(@_));
+}
+
+my $rec = Foobie->new();
+eval { $rec->_recurse(1) };
+diag($@) if $@;
+ok(!$@, 'Defining own set_foo and using _foo works.');		##
 
 1;
