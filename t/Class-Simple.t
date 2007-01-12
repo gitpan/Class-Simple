@@ -1,4 +1,4 @@
-# $Id: Class-Simple.t,v 1.4 2006/10/31 18:57:13 sullivan Exp $
+# $Id: Class-Simple.t,v 1.5 2007/01/12 22:20:02 sullivan Exp $
 #
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl Class-Simple.t'
@@ -7,7 +7,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 45;
+use Test::More tests => 47;
 BEGIN { use_ok('Class::Simple') };
 
 #########################
@@ -69,6 +69,9 @@ my $package = shift;
 #	is($f->lemmy, 4, 'lvalue worked with ++');		##
 #	$f->lv_lemmy -= 3;
 #	is($f->lemmy, 1, 'lvalue worked with -=');		##
+
+	$f->set_monkey_boy(1);
+	ok($f->monkey_boy, 'Methods with underscores.');	##
 }
 
 

@@ -1,5 +1,11 @@
 Revision history for Perl extension Class::Simple.
-$Id: Changes,v 1.3 2006/10/20 18:45:06 sullivan Exp $
+$Id: Changes,v 1.5 2007/01/12 22:19:48 sullivan Exp $
+
+0.05 Fri Jan 12 14:17:52 PST 2007
+	- Fixed a bug with underscores in method names.
+
+0.04 Tue Oct 31 14:52:17 PST 2006
+	- Fixed a bug with _foo when set_foo is overridden.
 
 0.03 Fri Oct 20 11:43:14 PDT 2006
 	- Reworked the privatization of methods after finding a pretty good bug.

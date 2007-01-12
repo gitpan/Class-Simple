@@ -1,4 +1,4 @@
-#$Id: Simple.pm,v 1.15 2006/10/31 18:56:44 sullivan Exp $
+#$Id: Simple.pm,v 1.16 2007/01/12 22:19:57 sullivan Exp $
 #
 #	See the POD documentation starting towards the __END__ of this file.
 
@@ -8,7 +8,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use Scalar::Util qw(refaddr);
 use Carp;
@@ -27,7 +27,7 @@ my $self = shift;
 
 	no strict 'refs';
 
-	$AUTOLOAD =~ /(.*)::(([^_]+)_)?(\w+)/;
+	$AUTOLOAD =~ /(.*)::((get|set|clear|raise|readonly)_)?(\w+)/;
 	my $pkg = $1;
 	my $full_method = $AUTOLOAD;
 	my $prefix = $3 || '';
@@ -35,6 +35,10 @@ my $self = shift;
 	my $store_as = $attrib;
 	$store_as =~ s/^_// unless $prefix;
 
+	#
+	#	Make sure that if you add more special prefixes here,
+	#	you add them to the $AUTOLOAD regex above, too.
+	#
 	if ($prefix eq 'set')
 	{
 		*{$AUTOLOAD} = sub
