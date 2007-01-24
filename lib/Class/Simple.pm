@@ -1,4 +1,4 @@
-#$Id: Simple.pm,v 1.16 2007/01/12 22:19:57 sullivan Exp $
+#$Id: Simple.pm,v 1.17 2007/01/24 19:43:03 sullivan Exp $
 #
 #	See the POD documentation starting towards the __END__ of this file.
 
@@ -8,7 +8,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use Scalar::Util qw(refaddr);
 use Carp;
@@ -24,6 +24,7 @@ our $AUTOLOAD;
 sub AUTOLOAD
 {
 my $self = shift;
+my @args = @_;
 
 	no strict 'refs';
 
@@ -121,7 +122,7 @@ my $self = shift;
 	#	the test easier than something privatized..
 	#
 	#	Note that we cannot just call get_ and set_ here
-	#	because if someone write their own get_foo and then
+	#	because if someone writes their own get_foo and then
 	#	_foo is called, _foo will call set_foo, which will
 	#	probably store something with _foo, which will call
 	#	set_foo, etc.  Sure wish we could somehow share
@@ -164,7 +165,7 @@ my $self = shift;
 			  : $self->$getter());
 		};
 	}
-	return (&{$AUTOLOAD}($self, @_));
+	return (&{$AUTOLOAD}($self, @args));
 }
 
 
