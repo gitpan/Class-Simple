@@ -1,4 +1,4 @@
-#$Id: Simple.pm,v 1.17 2007/01/24 19:43:03 sullivan Exp $
+#$Id: Simple.pm,v 1.18 2007/04/03 19:50:03 sullivan Exp $
 #
 #	See the POD documentation starting towards the __END__ of this file.
 
@@ -8,7 +8,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 use Scalar::Util qw(refaddr);
 use Carp;
@@ -135,7 +135,7 @@ my @args = @_;
 		my $self = shift;
 
 			croak("Cannot call $attrib:  Private method to $pkg.")
-			  unless ($pkg eq Class::Simple::_my_caller());
+			  unless ($pkg->isa(Class::Simple::_my_caller()));
 			my $ref = refaddr($self);
 			if (scalar(@_))
 			{
@@ -198,14 +198,14 @@ my $func = shift;
 
 	my $ref = refaddr($self);
 	$STORAGE{$ref}->{$storage}= {} unless exists($STORAGE{$ref}->{$storage});
-	my @path = Class::ISA::super_path($self->CLASS);
+	my @path = reverse(Class::ISA::super_path($self->CLASS));
 	foreach my $c (@path)
 	{
 		next if ($c eq __PACKAGE__);
 		next if $STORAGE{$ref}->{$storage}->{$c}++;
 
 		my $cn = "${c}::can";
-		if (my $in = $self->$cn($func))
+		if (my $in = $c->can($func))
 		{
 			$self->$in(@_);
 		}
@@ -428,7 +428,7 @@ Class::Simple - Simple Object-Oriented Base Class
   package Foo:
   use base qw(Class::Simple);
 
-  INIT
+  BEGIN
   {
 	Foo->privatize(qw(attrib1 attrib2)); # ...or not.
   }
@@ -557,10 +557,10 @@ It should probably be put in a B<BEGIN> or B<INIT> block.
 Did I say we can't catch typos?
 Well, that's only partially true.
 If B<uninitialized()> is called, any attempt to access an attribute
-that has not been defined (even if that definition is B<undef>)
+that has not been set (even if it was set to B<undef>)
 will result in a fatal error.
 So we won't catch typos on sets but we will on gets
-(and if you typo a set, the error on the get will be a good clue).
+(if you typo a set the error on the get will be your clue).
 
 =back
 
