@@ -1,5 +1,8 @@
 Revision history for Perl extension Class::Simple.
-$Id: Changes,v 1.7 2007/04/03 19:51:16 sullivan Exp $
+$Id: Changes,v 1.8 2007/08/23 19:12:55 sullivan Exp $
+
+0.08 Thu Aug 23 12:10:31 PDT 2007
+	- Added ATTRIBUTES().
 
 0.07 Tue Apr  3 12:50:43 PDT 2007
 	- BUILDs should first happen in the furthest ancestor.

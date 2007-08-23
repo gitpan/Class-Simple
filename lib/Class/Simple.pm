@@ -1,4 +1,4 @@
-#$Id: Simple.pm,v 1.18 2007/04/03 19:50:03 sullivan Exp $
+#$Id: Simple.pm,v 1.20 2007/08/23 19:13:01 sullivan Exp $
 #
 #	See the POD documentation starting towards the __END__ of this file.
 
@@ -8,16 +8,18 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 use Scalar::Util qw(refaddr);
 use Carp;
 use Class::ISA;
+use List::Util qw( first );
 
 my %STORAGE;
 my %PRIVATE;
 my %READONLY;
 my %TYPO;
+my @internal_attributes = qw(CLASS TYPO);
 
 our $AUTOLOAD;
 
@@ -35,6 +37,14 @@ my @args = @_;
 	my $attrib = $4;
 	my $store_as = $attrib;
 	$store_as =~ s/^_// unless $prefix;
+
+	if (my $get_attributes = $self->can('ATTRIBUTES'))
+	{
+		my @attributes = &$get_attributes();
+		push(@attributes, @internal_attributes);
+		croak("$attrib is not a defined attribute")
+		  unless first {$_ eq $attrib} @attributes;
+	}
 
 	#
 	#	Make sure that if you add more special prefixes here,
@@ -416,6 +426,36 @@ my $str = shift;
 	return ($self);
 }
 
+
+
+use JSON::XS;
+
+sub toJson
+{
+my $self = shift;
+
+	my $ref = refaddr($self);
+	my $json = JSON::XS->new();
+	return $json->encode($STORAGE{$ref});
+}
+
+
+
+sub fromJson
+{
+my $self = shift;
+my $str = shift;
+
+	return $self unless $str;
+
+	my $json = JSON::XS->new();
+	my $obj = $json->decode($str);
+	my $ref = refaddr($self);
+	$STORAGE{$ref} = $obj;
+
+	return ($self);
+}
+
 1;
 __END__
 
@@ -479,7 +519,7 @@ so I use this.
 
 What do I mean by simple?  First off, I don't want to have to list out
 all my methods beforehand.  I just want to use them (Yeah, yeah, it doesn't
-catch typos--that's what testing and Class::Std are for :-).
+catch typos...well, by default--see B<ATTRIBUTES()> below).
 Next, I want to be able to
 call my methods by $obj->foo(1) or $obj->set_foo(1), by $obj->foo() or
 $obj->get_foo().  Don't tell ME I have to use get_ and set_ (I would just
@@ -554,13 +594,10 @@ It should probably be put in a B<BEGIN> or B<INIT> block.
 
 =item B<uninitialized()>
 
-Did I say we can't catch typos?
-Well, that's only partially true.
 If B<uninitialized()> is called, any attempt to access an attribute
 that has not been set (even if it was set to B<undef>)
 will result in a fatal error.
-So we won't catch typos on sets but we will on gets
-(if you typo a set the error on the get will be your clue).
+I'm not sure this is a great feature but it's here for now.
 
 =back
 
@@ -577,6 +614,20 @@ object is created, this is the place to do it.
 
 If you want to write your own DESTROY, don't.
 Do it here in DEMOLISH, which will be called by DESTROY.
+
+=item B<ATTRIBUTES()>
+
+Did I say we can't catch typos?
+Well, that's only partially true.
+If this is defined in your class, it needs to return an array of
+attribute names.
+If it is defined, only the attributes returned will be allowed
+to be used.
+Trying to get or set an attribute not returned will be a fatal error.
+Note that this is an B<optional> method.
+You B<do not> have to define your attributes ahead of time to use
+Class::Simple.
+This provides an optional layer of error-checking.
 
 =back
 

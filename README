@@ -1,4 +1,4 @@
-Class-Simple version 0.03
+Class-Simple
 =========================
 
 This is a simple object-oriented base class.  There are plenty of oth-
@@ -45,4 +45,4 @@ This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.6 or,
 at your option, any later version of Perl 5 you may have available.
 
-$Id: README,v 1.6 2006/10/20 18:45:08 sullivan Exp $
+$Id: README,v 1.7 2007/08/23 17:42:16 sullivan Exp $
