@@ -1,4 +1,4 @@
-#$Id: Simple.pm,v 1.20 2007/08/23 19:13:01 sullivan Exp $
+#$Id: Simple.pm,v 1.21 2007/08/27 22:23:01 sullivan Exp $
 #
 #	See the POD documentation starting towards the __END__ of this file.
 
@@ -8,7 +8,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use Scalar::Util qw(refaddr);
 use Carp;
@@ -38,9 +38,9 @@ my @args = @_;
 	my $store_as = $attrib;
 	$store_as =~ s/^_// unless $prefix;
 
-	if (my $get_attributes = $self->can('ATTRIBUTES'))
+	my @attributes = $self->ATTRIBUTES;
+	if (scalar(@attributes))
 	{
-		my @attributes = &$get_attributes();
 		push(@attributes, @internal_attributes);
 		croak("$attrib is not a defined attribute")
 		  unless first {$_ eq $attrib} @attributes;
@@ -191,6 +191,16 @@ my $self = shift;
 	my $ref = refaddr($self);
 	delete($STORAGE{$ref}) if exists($STORAGE{$ref});
 	delete($READONLY{$ref}) if exists($READONLY{$ref});
+}
+
+
+
+#
+#	Default, which returns nothing.
+#
+sub ATTRIBUTES
+{
+	return;
 }
 
 
@@ -428,33 +438,33 @@ my $str = shift;
 
 
 
-use JSON::XS;
-
-sub toJson
-{
-my $self = shift;
-
-	my $ref = refaddr($self);
-	my $json = JSON::XS->new();
-	return $json->encode($STORAGE{$ref});
-}
-
-
-
-sub fromJson
-{
-my $self = shift;
-my $str = shift;
-
-	return $self unless $str;
-
-	my $json = JSON::XS->new();
-	my $obj = $json->decode($str);
-	my $ref = refaddr($self);
-	$STORAGE{$ref} = $obj;
-
-	return ($self);
-}
+#use JSON::XS;
+#
+#sub toJson
+#{
+#my $self = shift;
+#
+#	my $ref = refaddr($self);
+#	my $json = JSON::XS->new();
+#	return $json->encode($STORAGE{$ref});
+#}
+#
+#
+#
+#sub fromJson
+#{
+#my $self = shift;
+#my $str = shift;
+#
+#	return $self unless $str;
+#
+#	my $json = JSON::XS->new();
+#	my $obj = $json->decode($str);
+#	my $ref = refaddr($self);
+#	$STORAGE{$ref} = $obj;
+#
+#	return ($self);
+#}
 
 1;
 __END__
