@@ -1,4 +1,4 @@
-# $Id: private2.t,v 1.6 2007/08/27 22:23:38 sullivan Exp $
+# $Id: private2.t,v 1.7 2007/08/28 23:44:46 sullivan Exp $
 
 package Foo;
 use base qw(Class::Simple);
@@ -18,7 +18,7 @@ $foo->_mongo(1);
 package Foobie;
 use base qw(Foo);
 
-use Test::More tests => 9;
+use Test::More tests => 10;
 BEGIN { use_ok('Class::Simple') };
 
 my $f = Foobie->new();
@@ -38,10 +38,10 @@ ok(!$g->SLURP('foo'), 'SLURP caught bad input');		##
 $g->SLURP($str);
 is($g->foo, TEST_STR, 'DUMP and SLURP seem to work');		##
 
-#my $js = $f->toJson();
-#my $jsF = Foobie->new();
-#$jsF->fromJson($js);
-#is($jsF->foo, TEST_STR, 'toJson and fromJson seem to work');	##
+my $js = $f->toJson();
+my $jsF = Foobie->new();
+$jsF->fromJson($js);
+is($jsF->foo, TEST_STR, 'toJson and fromJson seem to work');	##
 
 Foobie->privatize(qw(moo));
 eval { $g->bomp() };

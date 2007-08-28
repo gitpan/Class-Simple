@@ -1,4 +1,4 @@
-#$Id: Simple.pm,v 1.21 2007/08/27 22:23:01 sullivan Exp $
+#$Id: Simple.pm,v 1.22 2007/08/28 23:44:44 sullivan Exp $
 #
 #	See the POD documentation starting towards the __END__ of this file.
 
@@ -8,7 +8,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 use Scalar::Util qw(refaddr);
 use Carp;
@@ -438,33 +438,40 @@ my $str = shift;
 
 
 
-#use JSON::XS;
 #
-#sub toJson
-#{
-#my $self = shift;
+#	toJson() and fromJson() are DUMP and SLURP equivalents for JSON.
+#	I'm not sure if they're all that useful yet so they're silently
+#	lurking here for now.
 #
-#	my $ref = refaddr($self);
-#	my $json = JSON::XS->new();
-#	return $json->encode($STORAGE{$ref});
-#}
-#
-#
-#
-#sub fromJson
-#{
-#my $self = shift;
-#my $str = shift;
-#
-#	return $self unless $str;
-#
-#	my $json = JSON::XS->new();
-#	my $obj = $json->decode($str);
-#	my $ref = refaddr($self);
-#	$STORAGE{$ref} = $obj;
-#
-#	return ($self);
-#}
+sub toJson
+{
+my $self = shift;
+
+	require JSON::XS;
+
+	my $ref = refaddr($self);
+	my $json = JSON::XS->new();
+	return $json->encode($STORAGE{$ref});
+}
+
+
+
+sub fromJson
+{
+my $self = shift;
+my $str = shift;
+
+	return $self unless $str;
+
+	require JSON::XS;
+
+	my $json = JSON::XS->new();
+	my $obj = $json->decode($str);
+	my $ref = refaddr($self);
+	$STORAGE{$ref} = $obj;
+
+	return ($self);
+}
 
 1;
 __END__
