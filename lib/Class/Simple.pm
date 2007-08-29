@@ -1,4 +1,4 @@
-#$Id: Simple.pm,v 1.22 2007/08/28 23:44:44 sullivan Exp $
+#$Id: Simple.pm,v 1.23 2007/08/29 00:08:36 sullivan Exp $
 #
 #	See the POD documentation starting towards the __END__ of this file.
 
@@ -8,7 +8,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 use Scalar::Util qw(refaddr);
 use Carp;
@@ -38,9 +38,9 @@ my @args = @_;
 	my $store_as = $attrib;
 	$store_as =~ s/^_// unless $prefix;
 
-	my @attributes = $self->ATTRIBUTES;
-	if (scalar(@attributes))
+	if (my $get_attributes = $self->can('ATTRIBUTES'))
 	{
+		my @attributes = &$get_attributes();
 		push(@attributes, @internal_attributes);
 		croak("$attrib is not a defined attribute")
 		  unless first {$_ eq $attrib} @attributes;
@@ -191,16 +191,6 @@ my $self = shift;
 	my $ref = refaddr($self);
 	delete($STORAGE{$ref}) if exists($STORAGE{$ref});
 	delete($READONLY{$ref}) if exists($READONLY{$ref});
-}
-
-
-
-#
-#	Default, which returns nothing.
-#
-sub ATTRIBUTES
-{
-	return;
 }
 
 
