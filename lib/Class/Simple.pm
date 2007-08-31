@@ -1,4 +1,4 @@
-#$Id: Simple.pm,v 1.23 2007/08/29 00:08:36 sullivan Exp $
+#$Id: Simple.pm,v 1.24 2007/08/31 20:55:16 sullivan Exp $
 #
 #	See the POD documentation starting towards the __END__ of this file.
 
@@ -8,7 +8,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 use Scalar::Util qw(refaddr);
 use Carp;
@@ -42,7 +42,7 @@ my @args = @_;
 	{
 		my @attributes = &$get_attributes();
 		push(@attributes, @internal_attributes);
-		croak("$attrib is not a defined attribute")
+		croak("$attrib is not a defined attribute in $pkg")
 		  unless first {$_ eq $attrib} @attributes;
 	}
 
@@ -437,7 +437,8 @@ sub toJson
 {
 my $self = shift;
 
-	require JSON::XS;
+	croak("Cannot use toJson(): module JSON::XS not found.\n")
+	  unless (eval 'require JSON::XS; 1');
 
 	my $ref = refaddr($self);
 	my $json = JSON::XS->new();
@@ -453,7 +454,8 @@ my $str = shift;
 
 	return $self unless $str;
 
-	require JSON::XS;
+	croak("Cannot use fromJson(): module JSON::XS not found.\n")
+	  unless (eval 'require JSON::XS; 1');
 
 	my $json = JSON::XS->new();
 	my $obj = $json->decode($str);

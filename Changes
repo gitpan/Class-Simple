@@ -1,5 +1,8 @@
 Revision history for Perl extension Class::Simple.
-$Id: Changes,v 1.11 2007/08/29 00:09:16 sullivan Exp $
+$Id: Changes,v 1.12 2007/08/31 20:54:59 sullivan Exp $
+
+0.12 Fri Aug 31 13:54:11 PDT 2007
+	- Bug fix.
 
 0.11 Tue Aug 28 17:08:48 PDT 2007
 	- Removed the default ATTRIBUTES().
