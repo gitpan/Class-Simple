@@ -1,4 +1,4 @@
-#$Id: Simple.pm,v 1.24 2007/08/31 20:55:16 sullivan Exp $
+#$Id: Simple.pm,v 1.25 2007/09/04 17:04:12 sullivan Exp $
 #
 #	See the POD documentation starting towards the __END__ of this file.
 
@@ -8,7 +8,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 use Scalar::Util qw(refaddr);
 use Carp;

@@ -1,5 +1,9 @@
 Revision history for Perl extension Class::Simple.
-$Id: Changes,v 1.12 2007/08/31 20:54:59 sullivan Exp $
+$Id: Changes,v 1.13 2007/09/04 17:04:00 sullivan Exp $
+
+0.13 Tue Sep  4 10:03:06 PDT 2007
+	- Finally found a way to test the JSON stuff on boxes where it's
+	  not installed.
 
 0.12 Fri Aug 31 13:54:11 PDT 2007
 	- Bug fix.

@@ -1,4 +1,4 @@
-# $Id: private2.t,v 1.7 2007/08/28 23:44:46 sullivan Exp $
+# $Id: private2.t,v 1.8 2007/09/04 17:04:19 sullivan Exp $
 
 package Foo;
 use base qw(Class::Simple);
@@ -38,10 +38,16 @@ ok(!$g->SLURP('foo'), 'SLURP caught bad input');		##
 $g->SLURP($str);
 is($g->foo, TEST_STR, 'DUMP and SLURP seem to work');		##
 
-my $js = $f->toJson();
-my $jsF = Foobie->new();
-$jsF->fromJson($js);
-is($jsF->foo, TEST_STR, 'toJson and fromJson seem to work');	##
+SKIP:
+{
+	eval { require JSON::XS };
+	skip('JSON::XS not installed.', 1);
+
+	my $js = $f->toJson();
+	my $jsF = Foobie->new();
+	$jsF->fromJson($js);
+	is($jsF->foo, TEST_STR, 'toJson and fromJson seem to work');	##
+}
 
 Foobie->privatize(qw(moo));
 eval { $g->bomp() };
