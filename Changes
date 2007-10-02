@@ -1,5 +1,8 @@
 Revision history for Perl extension Class::Simple.
-$Id: Changes,v 1.13 2007/09/04 17:04:00 sullivan Exp $
+$Id: Changes,v 1.14 2007/10/02 23:04:41 sullivan Exp $
+
+0.14 Tue Oct  2 16:03:10 PDT 2007
+	- Added support for get__foo() and set__foo().
 
 0.13 Tue Sep  4 10:03:06 PDT 2007
 	- Finally found a way to test the JSON stuff on boxes where it's

@@ -1,4 +1,4 @@
-# $Id: Class-Simple.t,v 1.5 2007/01/12 22:20:02 sullivan Exp $
+# $Id: Class-Simple.t,v 1.6 2007/10/02 23:04:46 sullivan Exp $
 #
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl Class-Simple.t'
@@ -18,6 +18,9 @@ INIT
 	$destroyed = 0;
 }
 
+#
+#	Count these twice.
+#
 sub run_tests
 {
 my $f = shift;

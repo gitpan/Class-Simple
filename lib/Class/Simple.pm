@@ -1,4 +1,4 @@
-#$Id: Simple.pm,v 1.25 2007/09/04 17:04:12 sullivan Exp $
+#$Id: Simple.pm,v 1.26 2007/10/02 23:04:44 sullivan Exp $
 #
 #	See the POD documentation starting towards the __END__ of this file.
 
@@ -8,7 +8,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.13';
+our $VERSION = '0.14';
 
 use Scalar::Util qw(refaddr);
 use Carp;
@@ -35,6 +35,7 @@ my @args = @_;
 	my $full_method = $AUTOLOAD;
 	my $prefix = $3 || '';
 	my $attrib = $4;
+	$prefix = '' if ($attrib =~ /^_/);
 	my $store_as = $attrib;
 	$store_as =~ s/^_// unless $prefix;
 
@@ -140,6 +141,11 @@ my @args = @_;
 	#
 	elsif (!$prefix && ($attrib =~ /^_/))
 	{
+		if (my $method = $pkg->can($attrib))
+		{
+			return &$method($self, @args);
+		}
+
 		*{$AUTOLOAD} = sub
 		{
 		my $self = shift;
@@ -716,6 +722,7 @@ you can use B<_foo> to keep the data.
 That way you don't have to roll your own way of storing the data,
 possibly breaking inside-out.
 Underscore methods are automatically privatized.
+Also works as B<set__foo> and B<get__foo>.
 
 =back
 
