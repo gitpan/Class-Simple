@@ -1,4 +1,4 @@
-#$Id: Simple.pm,v 1.26 2007/10/02 23:04:44 sullivan Exp $
+#$Id: Simple.pm,v 1.27 2007/10/03 23:33:59 sullivan Exp $
 #
 #	See the POD documentation starting towards the __END__ of this file.
 
@@ -8,7 +8,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.14';
+our $VERSION = '0.15';
 
 use Scalar::Util qw(refaddr);
 use Carp;
@@ -237,6 +237,16 @@ my $func = shift;
 sub new
 {
 my $class = shift;
+
+	#
+	#	Support for NONEW.
+	#
+	{
+		no strict 'refs';
+		my $classy = "${class}::";
+		croak("Cannot call new() in $class.")
+		  if exists(${$classy}{'NONEW'});
+	}
 
 	#
 	#	This is how you get an anonymous scalar.
@@ -566,7 +576,9 @@ Heck, you don't even need that much:
 	my $obj = Class::Simple->new();
 	$obj->set_attr($value);
 
-I don't know why one would want to use an anonymous object but you can.
+Why would you want to use a (not quite) anonymous object?
+Well, you can use it to simulate the interface of a class
+to do some testing and debugging.
 
 =head2 Garbage Collection
 
@@ -624,6 +636,12 @@ I'm not sure this is a great feature but it's here for now.
 
 If there is initialization that you would like to do after an
 object is created, this is the place to do it.
+
+=item B<NONEW()>
+
+If this is defined in a class, B<new()> will not work for that class.
+You can use this in an abstract class when only concrete classes
+descended from the abstract class should have B<new()>.
 
 =item B<DEMOLISH()>
 

@@ -7,6 +7,7 @@ t/Class-Simple.t
 t/anon.t
 t/attributes.t
 t/isa.t
+t/nonew.t
 t/pod.t
 t/private1.t
 t/private2.t
