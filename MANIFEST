@@ -6,12 +6,15 @@ TODO
 t/Class-Simple.t
 t/anon.t
 t/attributes.t
+t/inherit.t
 t/isa.t
 t/nonew.t
+t/override.t
 t/pod.t
 t/private1.t
 t/private2.t
 t/private3.t
+t/storable.t
 t/uninit1.t
 t/uninit2.t
 lib/Class/Simple.pm

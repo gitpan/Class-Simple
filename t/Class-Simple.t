@@ -1,4 +1,4 @@
-# $Id: Class-Simple.t,v 1.6 2007/10/02 23:04:46 sullivan Exp $
+# $Id: Class-Simple.t,v 1.7 2007/10/29 21:14:56 sullivan Exp $
 #
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl Class-Simple.t'
@@ -26,15 +26,15 @@ sub run_tests
 my $f = shift;
 my $package = shift;
 
-	diag("Package is $package.");
+	#diag("Package is $package.");
 	isa_ok($f, $package);					##
 	can_ok($f, 'new');					##
 	can_ok($f, 'privatize');				##
 	can_ok($f, 'uninitialized');				##
 	can_ok($f, 'DESTROY');					##
 	can_ok($f, 'AUTOLOAD');					##
-	can_ok($f, 'DUMP');					##
-	can_ok($f, 'SLURP');					##
+	can_ok($f, 'STORABLE_freeze');				##
+	can_ok($f, 'STORABLE_thaw');				##
 	
 	is($f->zomba, 333, 'BUILD initialized');		##
 	$f->foo(1);

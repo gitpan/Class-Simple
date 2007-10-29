@@ -1,5 +1,10 @@
 Revision history for Perl extension Class::Simple.
-$Id: Changes,v 1.15 2007/10/03 23:33:56 sullivan Exp $
+$Id: Changes,v 1.16 2007/10/29 21:13:40 sullivan Exp $
+
+0.16 Mon Oct 29 14:06:05 PDT 2007
+	- Added STORABLE_freeze() and STORABLE_thaw() to support Storable.
+	  Doing that meant I removed DUMP and SLURP.  If anybody actually
+	  uses those, let me know and I'll put them back in.
 
 0.15 Wed Oct  3 16:33:04 PDT 2007
 	- Added NONEW

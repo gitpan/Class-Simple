@@ -1,4 +1,4 @@
-# $Id: private2.t,v 1.9 2007/10/02 23:04:48 sullivan Exp $
+# $Id: private2.t,v 1.10 2007/10/29 21:14:13 sullivan Exp $
 
 package Foo;
 use base qw(Class::Simple);
@@ -18,7 +18,7 @@ $foo->_mongo(1);
 package Foobie;
 use base qw(Foo);
 
-use Test::More tests => 13;
+use Test::More tests => 10;
 BEGIN { use_ok('Class::Simple') };
 
 my $f = Foobie->new();
@@ -29,26 +29,18 @@ eval { Foobie->privatize(qw(bar)) };
 # diag($@) if $@;
 like($@, qr/already private/, 'cannot privatize bar in Foobie');
 
-use constant TEST_STR => 'abcdef';
-$f->foo(TEST_STR);
-my $str = $f->DUMP('moo');
-# diag("dump is $str");
+#SKIP:
+#{
+#	eval { require JSON::XS };
+#	skip('JSON::XS not installed.', 1);
+#
+#	my $js = $f->toJson();
+#	my $jsF = Foobie->new();
+#	$jsF->fromJson($js);
+#	is($jsF->foo, TEST_STR, 'toJson and fromJson seem to work');	##
+#}
+
 my $g = Foobie->new();
-ok(!$g->SLURP('foo'), 'SLURP caught bad input');		##
-$g->SLURP($str);
-is($g->foo, TEST_STR, 'DUMP and SLURP seem to work');		##
-
-SKIP:
-{
-	eval { require JSON::XS };
-	skip('JSON::XS not installed.', 1);
-
-	my $js = $f->toJson();
-	my $jsF = Foobie->new();
-	$jsF->fromJson($js);
-	is($jsF->foo, TEST_STR, 'toJson and fromJson seem to work');	##
-}
-
 Foobie->privatize(qw(moo));
 eval { $g->bomp() };
 diag($@) if $@;

@@ -1,4 +1,4 @@
-#$Id: Simple.pm,v 1.27 2007/10/03 23:33:59 sullivan Exp $
+#$Id: Simple.pm,v 1.28 2007/10/29 21:13:14 sullivan Exp $
 #
 #	See the POD documentation starting towards the __END__ of this file.
 
@@ -8,7 +8,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.15';
+our $VERSION = '0.16';
 
 use Scalar::Util qw(refaddr);
 use Carp;
@@ -400,85 +400,76 @@ my $self = shift;
 
 
 
-use Data::Dumper;
+##
+##	toJson() and fromJson() are DUMP and SLURP equivalents for JSON.
+##	I'm not sure if they're all that useful yet so they're silently
+##	lurking here for now.
+##
+#sub toJson
+#{
+#my $self = shift;
+#
+#	croak("Cannot use toJson(): module JSON::XS not found.\n")
+#	  unless (eval 'require JSON::XS; 1');
+#
+#	my $ref = refaddr($self);
+#	my $json = JSON::XS->new();
+#	return $json->encode($STORAGE{$ref});
+#}
+#
+#
+#
+#sub fromJson
+#{
+#my $self = shift;
+#my $str = shift;
+#
+#	return $self unless $str;
+#
+#	croak("Cannot use fromJson(): module JSON::XS not found.\n")
+#	  unless (eval 'require JSON::XS; 1');
+#
+#	my $json = JSON::XS->new();
+#	my $obj = $json->decode($str);
+#	my $ref = refaddr($self);
+#	$STORAGE{$ref} = $obj;
+#
+#	return ($self);
+#}
+
+
 
 #
-#	Right now DUMP and SLURP are just Data::Dumper front ends.
-#	That does not take care of referring to other objects (should it?)
-#	so I hope to come up with something more clever in the future.
+#	Callback for Storable to serialize objects.
 #
-sub DUMP
+sub STORABLE_freeze
 {
 my $self = shift;
-my $name = shift || 'obj';
+my $cloning = shift;
+
+	croak("Cannot use STORABLE_freeze(): module Storable not found.\n")
+	  unless (eval 'require Storable; 1');
 
 	my $ref = refaddr($self);
-	my $d = Data::Dumper->new([$STORAGE{$ref}], [$name]);
-	return ($d->Dump());
+	return Storable::freeze($STORAGE{$ref});
 }
 
 
 
-sub SLURP
-{
-my $self = shift;
-my $str = shift;
-
-	return $self unless $str;
-
-	my $obj;
-	{
-		$obj = eval "my $str";
-		if ($@)
-		{
-			carp("Problem SLURPING: $@.");
-			return (undef);
-		}
-	}
-
-	my $ref = refaddr($self);
-	$STORAGE{$ref} = $obj;
-
-	return ($self);
-}
-
-
-
 #
-#	toJson() and fromJson() are DUMP and SLURP equivalents for JSON.
-#	I'm not sure if they're all that useful yet so they're silently
-#	lurking here for now.
+#	Callback for Storable to reconstitute serialized objects.
 #
-sub toJson
+sub STORABLE_thaw
 {
 my $self = shift;
+my $cloning = shift;
+my $serialized = shift;
 
-	croak("Cannot use toJson(): module JSON::XS not found.\n")
-	  unless (eval 'require JSON::XS; 1');
+	croak("Cannot use STORABLE_thaw(): module Storable not found.\n")
+	  unless (eval 'require Storable; 1');
 
 	my $ref = refaddr($self);
-	my $json = JSON::XS->new();
-	return $json->encode($STORAGE{$ref});
-}
-
-
-
-sub fromJson
-{
-my $self = shift;
-my $str = shift;
-
-	return $self unless $str;
-
-	croak("Cannot use fromJson(): module JSON::XS not found.\n")
-	  unless (eval 'require JSON::XS; 1');
-
-	my $json = JSON::XS->new();
-	my $obj = $json->decode($str);
-	my $ref = refaddr($self);
-	$STORAGE{$ref} = $obj;
-
-	return ($self);
+	$STORAGE{$ref} = Storable::thaw($serialized);
 }
 
 1;
@@ -524,9 +515,11 @@ Class::Simple - Simple Object-Oriented Base Class
     ...
   }
 
-  my $str = $obj->DUMP;
-  my $new_obj = Foo->new();
-  $new_obj->SLURP($str);
+  my $str = Storable::freeze($obj);
+  # Save $str to a file
+  ...
+  # Read contents of file into $new_str
+  $new_obj = Storable::thaw($new_str);
 
   sub BUILD
   {
@@ -677,20 +670,6 @@ Actually, it calls all the B<BUILD()>s of all the ancestor classes
 If, for some reason, you do not want to do that,
 simply write your own B<init()> and this will be short-circuited.
 
-=item B<DUMP(>['name']B<)>
-
-Return a serialization of the given object.
-If the optional 'name' parameter is given, the variable in the serialization
-will be named 'name'.  Otherwise it will be named 'obj'.
-
-=item B<SLURP(>$strB<)>
-
-Put the given B<DUMP()> output into the object.
-Obviously someone can short-circuit things by manipulating a B<DUMP()>
-and B<SLURP()>ing that in.
-If you're that paranoid and/or your users are that sneaky,
-perhaps you shouldn't use a module as simple as this.
-
 =item B<CLASS>
 
 The class this object was blessed in.
@@ -744,6 +723,19 @@ Also works as B<set__foo> and B<get__foo>.
 
 =back
 
+=head2 Serialization
+
+There are hooks here to work with L<Storable> to serialize objects.
+To serialize a Class::Simple-derived object:
+
+    use Storable;
+
+    my $serialized = Storable::freeze($obj);
+
+To reconstitute an object saved with B<freeze()>:
+
+    my $new_obj = Storable::thaw($serialized_str);
+
 =head1 CAVEATS
 
 If an ancestor class has a B<foo> attribute, children cannot have their
@@ -763,13 +755,15 @@ I<Object Oriented Perl>).
 Many things here, like the name B<DEMOLISH()>, were shamelessly stolen from it.
 Standing on the shoulders of giants and all that.
 
+L<Storable>
+
 =head1 AUTHOR
 
 Michael Sullivan, E<lt>perldude@mac.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2006 by Michael Sullivan
+Copyright (C) 2007 by Michael Sullivan
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.6 or,
