@@ -1,9 +1,9 @@
+# $Id: Makefile.PL,v 1.6 2008/01/30 18:05:15 sullivan Exp $
+
 use 5.008;
 use ExtUtils::MakeMaker;
-# See lib/ExtUtils/MakeMaker.pm for details of how to influence
-# the contents of the Makefile that is written.
-#
-# $Id: Makefile.PL,v 1.5 2007/12/31 19:59:11 sullivan Exp $
+use ExtUtils::MakeMaker::Coverage;
+
 WriteMakefile(
     NAME              => 'Class::Simple',
     VERSION_FROM      => 'lib/Class/Simple.pm', # finds $VERSION

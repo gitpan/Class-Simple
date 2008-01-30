@@ -1,4 +1,4 @@
-# $Id: Class-Simple.t,v 1.7 2007/10/29 21:14:56 sullivan Exp $
+# $Id: Class-Simple.t,v 1.8 2008/01/30 18:04:31 sullivan Exp $
 #
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl Class-Simple.t'
@@ -7,7 +7,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 47;
+use Test::More tests => 45;
 BEGIN { use_ok('Class::Simple') };
 
 #########################
@@ -30,7 +30,6 @@ my $package = shift;
 	isa_ok($f, $package);					##
 	can_ok($f, 'new');					##
 	can_ok($f, 'privatize');				##
-	can_ok($f, 'uninitialized');				##
 	can_ok($f, 'DESTROY');					##
 	can_ok($f, 'AUTOLOAD');					##
 	can_ok($f, 'STORABLE_freeze');				##

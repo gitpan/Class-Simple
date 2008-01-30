@@ -1,4 +1,4 @@
-#$Id: Simple.pm,v 1.29 2007/12/31 19:54:30 sullivan Exp $
+#$Id: Simple.pm,v 1.30 2008/01/30 18:00:39 sullivan Exp $
 #
 #	See the POD documentation starting towards the __END__ of this file.
 
@@ -8,7 +8,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.17';
+our $VERSION = '0.18';
 
 use Scalar::Util qw(refaddr);
 use Carp;
@@ -18,10 +18,10 @@ use List::Util qw( first );
 my %STORAGE;
 my %PRIVATE;
 my %READONLY;
-my %TYPO;
-my @internal_attributes = qw(CLASS TYPO);
+my @internal_attributes = qw(CLASS);
 
 our $AUTOLOAD;
+our $No_serialized_code;
 
 sub AUTOLOAD
 {
@@ -38,12 +38,25 @@ my $self = $_[0]; # DO NOT use shift().  It causes problems with goto.
 	my $store_as = $attrib;
 	$store_as =~ s/^_// unless $prefix;
 
+	my $setter = "set_$attrib";
+	my $getter = "get_$attrib";
+
 	if (my $get_attributes = $self->can('ATTRIBUTES'))
 	{
 		my @attributes = &$get_attributes();
 		push(@attributes, @internal_attributes);
 		croak("$attrib is not a defined attribute in $pkg")
-		  unless first {$_ eq $attrib} @attributes;
+		  unless first(sub {$_ eq $attrib}, @attributes);
+	}
+
+	if (my $get_private = $pkg->can('PRIVATIZE'))
+	{
+		my @privates = &$get_private();
+		if ( first(sub {$_ eq $attrib}, @privates)
+		  && (_my_caller() ne $pkg) )
+		{
+			croak("$attrib is private to $pkg.");
+		}
 	}
 
 	#
@@ -57,7 +70,7 @@ my $self = $_[0]; # DO NOT use shift().  It causes problems with goto.
 		my $self = shift;
 
 			my $ref = refaddr($self);
-			my $store_as = $self->caller_class($store_as);
+			my $store_as = $self->_caller_class($store_as);
 			croak("$attrib is readonly:  cannot set.")
 			  if ($READONLY{$ref}->{$store_as});
 			return ($STORAGE{$ref}->{$store_as} = shift(@_));
@@ -70,12 +83,8 @@ my $self = $_[0]; # DO NOT use shift().  It causes problems with goto.
 		my $self = shift;
 
 			my $ref = refaddr($self);
-			my $typo = $self->caller_class('TYPO', $STORAGE{$ref});
-			my $store_as = $self->caller_class($store_as,
+			my $store_as = $self->_caller_class($store_as,
 			  $STORAGE{$ref});
-			croak("$attrib is not set!")
-			  if ($STORAGE{$ref}->{$typo}
-			   && !exists($STORAGE{$ref}->{$store_as}));
 			return ($STORAGE{$ref}->{$store_as});
 		};
 	}
@@ -92,7 +101,7 @@ my $self = $_[0]; # DO NOT use shift().  It causes problems with goto.
 #		my $self = shift;
 #
 #			my $ref = refaddr($self);
-#			my $store_as = $self->caller_class($store_as);
+#			my $store_as = $self->_caller_class($store_as);
 #			croak("$attrib is readonly:  cannot set.")
 #			  if ($READONLY{$ref}->{$store_as});
 #			return ($STORAGE{$ref}->{$store_as});
@@ -100,7 +109,6 @@ my $self = $_[0]; # DO NOT use shift().  It causes problems with goto.
 #	}
 	elsif ($prefix eq 'clear')
 	{
-		my $setter = "set_$attrib";
 		*{$AUTOLOAD} = sub
 		{
 		my $self = shift;
@@ -110,7 +118,6 @@ my $self = $_[0]; # DO NOT use shift().  It causes problems with goto.
 	}
 	elsif ($prefix eq 'raise')
 	{
-		my $setter = "set_$attrib";
 		*{$AUTOLOAD} = sub
 		{
 		my $self = shift;
@@ -120,14 +127,13 @@ my $self = $_[0]; # DO NOT use shift().  It causes problems with goto.
 	}
 	elsif ($prefix eq 'readonly')
 	{
-		my $setter = "set_$attrib";
 		*{$AUTOLOAD} = sub
 		{
 		my $self = shift;
 
 			my $ret = $self->$setter(@_);
 			my $ref = refaddr($self);
-			my $store_as = $self->caller_class($store_as);
+			my $store_as = $self->_caller_class($store_as);
 			$READONLY{$ref}->{$store_as} = 1;
 			return ($ret);
 		};
@@ -160,26 +166,21 @@ my $self = $_[0]; # DO NOT use shift().  It causes problems with goto.
 			my $ref = refaddr($self);
 			if (scalar(@_))
 			{
-				my $store_as = $self->caller_class($store_as);
+				my $store_as = $self->_caller_class($store_as);
 				croak("$attrib is readonly:  cannot set.")
 				  if ($READONLY{$ref}->{$store_as});
 				return ($STORAGE{$ref}->{$store_as} =shift(@_));
 			}
 			else
 			{
-				my $store_as = $self->caller_class($store_as,
+				my $store_as = $self->_caller_class($store_as,
 				  $STORAGE{$ref});
-				croak("$attrib is not set!")
-				  if ($STORAGE{$ref}->{TYPO}
-				   && !exists($STORAGE{$ref}->{$store_as}));
 				return ($STORAGE{$ref}->{$store_as});
 			}
 		};
 	}
 	else
 	{
-		my $setter = "set_$attrib";
-		my $getter = "get_$attrib";
 		*{$AUTOLOAD} = sub
 		{
 		my $self = shift;
@@ -201,7 +202,7 @@ sub DESTROY
 {
 my $self = shift;
 
-	$self->travel_isa('DESTROY', 'DEMOLISH');
+	$self->_travel_isa('DESTROY', 'DEMOLISH');
 	my $ref = refaddr($self);
 	delete($STORAGE{$ref}) if exists($STORAGE{$ref});
 	delete($READONLY{$ref}) if exists($READONLY{$ref});
@@ -214,7 +215,7 @@ my $self = shift;
 #	To keep from running a sub more than once we flag
 #	$storage in %STORAGE.
 #
-sub travel_isa
+sub _travel_isa
 {
 my $self = shift;
 my $storage = shift;
@@ -257,33 +258,39 @@ my $func = shift;
 #	The set_a in Bar should not affect the set_a in Foo and neither should
 #	affect an Foo object that has done its own set_a.
 #
-sub caller_class
+sub _caller_class
 {
 my $self = shift;
 my $store_as = shift;
 my $storage = shift;
 
-	for (my $i = 0; my $c = scalar(caller($i)); ++$i)
-	{
-		next if ($c eq __PACKAGE__);
-		my $sa = "${c}::${store_as}";
-		if ($storage)
-		{
-			next unless $self->isa($c);
-			my @path = reverse(Class::ISA::super_path($c));
-			foreach my $p ($c, @path)
-			{
-				my $sa = "${p}::${store_as}";
-				return ($sa) if exists($storage->{$sa});
-			}
-		}
-		else
-		{
-			return ($sa) if $self->isa($c);
-		}
-	}
-	my $sa = ref($self) . "::${store_as}";
-	return ($sa); # Shouldn't get here but just in case
+	#
+	#	There is a problem with multiple-inheritance.  Until I
+	#	can figure out a solution, just return $store_as to
+	#	disable this feature.
+	#
+	return $store_as;
+#	for (my $i = 0; my $c = scalar(caller($i)); ++$i)
+#	{
+#		next if ($c eq __PACKAGE__);
+#		my $sa = "${c}::${store_as}";
+#		if ($storage)
+#		{
+#			next unless $self->isa($c);
+#			my @path = reverse(Class::ISA::super_path($c));
+#			foreach my $p ($c, @path)
+#			{
+#				my $sa = "${p}::${store_as}";
+#				return ($sa) if exists($storage->{$sa});
+#			}
+#		}
+#		else
+#		{
+#			return ($sa) if $self->isa($c);
+#		}
+#	}
+#	my $sa = ref($self) . "::${store_as}";
+#	return ($sa); # Shouldn't get here but just in case
 }
 
 
@@ -312,32 +319,8 @@ my $class = shift;
 	bless($self, $class);
 	$self->readonly_CLASS($class);
 
-	#
-	#	Even though uninitialized is a class thing, it's easier
-	#	to note it in $self here in new().
-	#
-	foreach my $k (keys(%TYPO))
-	{
-		next unless ($class)->isa($k);
-		$self->readonly_TYPO(1);
-		last;
-	}
-
 	$self->init(@_);
 	return ($self);
-}
-
-
-
-#
-#	Flag that this class should croak if an uninitialized attribute
-#	is accessed.
-#
-sub uninitialized
-{
-my $class = shift;
-
-	$TYPO{$class} = 1;
 }
 
 
@@ -393,10 +376,7 @@ my $class = shift;
 			croak("Cannot call $getter:  Private method to $class.")
 			  unless $class->isa(Class::Simple::_my_caller());
 			my $ref = refaddr($self);
-			my $store_as = $self->caller_class($method);
-			croak("$method is not set!")
-			  if ($self->TYPO
-			   && !exists($STORAGE{$ref}->{$store_as}));
+			my $store_as = $self->_caller_class($method);
 			return ($STORAGE{$ref}->{$store_as});
 		};
 		*$setter = sub
@@ -407,7 +387,7 @@ my $class = shift;
 			croak("Cannot call $setter:  Private method to $class.")
 			  unless $class->isa(Class::Simple::_my_caller());
 			my $ref = refaddr($self);
-			my $store_as = $self->caller_class($method);
+			my $store_as = $self->_caller_class($method);
 			croak("$method is readonly:  cannot set.")
 			  if ($READONLY{$ref}->{$store_as});
 			return ($STORAGE{$ref}->{$store_as} = shift(@_));
@@ -454,7 +434,7 @@ sub init
 {
 my $self = shift;
 
-	$self->travel_isa('init', 'BUILD', @_);
+	$self->_travel_isa('init', 'BUILD', @_);
 	return ($self);
 }
 
@@ -510,6 +490,7 @@ my $cloning = shift;
 	croak("Cannot use STORABLE_freeze(): module Storable not found.\n")
 	  unless (eval 'require Storable; 1');
 
+	$Storable::Deparse = !$No_serialized_code;
 	my $ref = refaddr($self);
 	return Storable::freeze($STORAGE{$ref});
 }
@@ -528,6 +509,7 @@ my $serialized = shift;
 	croak("Cannot use STORABLE_thaw(): module Storable not found.\n")
 	  unless (eval 'require Storable; 1');
 
+	$Storable::Eval = !$No_serialized_code;
 	my $ref = refaddr($self);
 	$STORAGE{$ref} = Storable::thaw($serialized);
 }
@@ -658,33 +640,6 @@ and "Ouch!" is printed.
 Why is C<$a> referring to an out-of-scope object in the first place?
 Programmer error--there is only so much that C<Class::Simple> can fix :-).
 
-=head2 Inherited Attributes
-
-Given:
-
-=over 4
-
-=item
-
-Class C<Foo> that derives from C<Class::Simple>.
-
-=item
-
-Class C<Bar> that derives from C<Foo>.
-
-=item
-
-C<$obj> that is a C<Foo> object.
-
-=back
-
-If one does C<$obj-E<gt>set_a(1)>, this will not interfere with a
-C<$self-E<gt>set_a(2)> done in C<Foo.pm>,
-nor with a C<$self-E<gt>set_a(3)> done in C<Bar.pm>.
-The three are distinct.
-However, if C<$obj> does not do a C<set_a>,
-the value of C<$obj-E<gt>a> will be 3, since it will inherit from C<Bar>.
-
 =head1 METHODS
 
 =head2 Class Methods
@@ -701,13 +656,6 @@ Mark the given methods as being private to the class.
 They will only be accessible to the class or its ancestors.
 Make sure this is called before you start instantiating objects.
 It should probably be put in a C<BEGIN> or C<INIT> block.
-
-=item B<uninitialized()>
-
-If C<uninitialized()> is called, any attempt to access an attribute
-that has not been set (even if it was set to C<undef>)
-will result in a fatal error.
-I'm not sure this is a great feature but it's here for now.
 
 =back
 
@@ -766,6 +714,12 @@ The class this object was blessed in.
 Really used for internal housekeeping but I might as well let you
 know about it in case it would be helpful.
 It is readonly (see below).
+
+=item B<STORABLE_freeze>
+
+=item B<STORABLE_thaw>
+
+See B<Serialization and Cloning> below.
 
 =back
 
@@ -829,6 +783,11 @@ To reconstitute an object saved with C<freeze()>:
 L<Storable>'s C<dclone> also works if you want to clone an object:
 
     my $new_obj = Storable::dclone($old_obj);
+
+=head1 CAVEATS
+
+If an ancestor class has a B<foo> attribute, children cannot have their
+own B<foo>.  They get their parent's B<foo>.
 
 =head1 SEE ALSO
 
