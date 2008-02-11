@@ -2,7 +2,6 @@
 
 use 5.008;
 use ExtUtils::MakeMaker;
-use ExtUtils::MakeMaker::Coverage;
 
 WriteMakefile(
     NAME              => 'Class::Simple',

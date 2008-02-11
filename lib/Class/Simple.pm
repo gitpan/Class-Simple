@@ -1,4 +1,4 @@
-#$Id: Simple.pm,v 1.30 2008/01/30 18:00:39 sullivan Exp $
+#$Id: Simple.pm,v 1.31 2008/02/01 00:38:06 sullivan Exp $
 #
 #	See the POD documentation starting towards the __END__ of this file.
 
@@ -8,7 +8,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.18';
+our $VERSION = '0.19';
 
 use Scalar::Util qw(refaddr);
 use Carp;
@@ -29,14 +29,32 @@ my $self = $_[0]; # DO NOT use shift().  It causes problems with goto.
 
 	no strict 'refs';
 
-	$AUTOLOAD =~ /(.*)::((get|set|clear|raise|readonly)_)?(\w+)/;
+	$AUTOLOAD =~ /(.*)::((get|set|clear|raise|readonly|_)_)?(\w+)/;
 	my $pkg = $1;
-	my $full_method = $AUTOLOAD;
 	my $prefix = $3 || '';
 	my $attrib = $4;
-	$prefix = '' if ($attrib =~ /^_/);
-	my $store_as = $attrib;
-	$store_as =~ s/^_// unless $prefix;
+
+	#
+	#	$obj->set__foo and $obj->get__foo
+	#
+	my $store_as;
+	if ($prefix eq '_')
+	{
+		$attrib = "_$attrib";
+		$store_as = $attrib;
+	}
+	#
+	#	$obj->_foo
+	#
+	elsif (($attrib =~ /^_/) && !$prefix)
+	{
+		$store_as = $attrib;
+		$store_as =~ s/^_//;
+	}
+	else
+	{
+		$store_as = $attrib;
+	}
 
 	my $setter = "set_$attrib";
 	my $getter = "get_$attrib";
@@ -667,6 +685,8 @@ It should probably be put in a C<BEGIN> or C<INIT> block.
 
 If there is initialization that you would like to do after an
 object is created, this is the place to do it.
+Note that if you want to raise an exception in your BUILD(),
+use die() and not the croak() family.
 
 =item B<NONEW()>
 

@@ -1,5 +1,8 @@
 Revision history for Perl extension Class::Simple.
-$Id: Changes,v 1.18 2008/01/30 18:01:15 sullivan Exp $
+$Id: Changes,v 1.19 2008/02/01 00:38:45 sullivan Exp $
+
+0.19 Thu Jan 31 16:38:15 PST 2008
+	- Cleaned up the whole set__foo() and _foo() stuff.  I think.
 
 0.18 Wed Jan 30 09:55:37 PST 2008
 	- Took out the conflict resolution feature.  There was a problem
